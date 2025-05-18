@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    networks:
+      - stream-net
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=stream-cluster
+
+  zookeeper-server:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper-server
+    networks:
+      - stream-net
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka-server:
+    image: bitnami/kafka:3.2.3
+    container_name: kafka-server
+    networks:
+      - stream-net
+    ports:
+      - "9092:9092"
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-server:9092
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092
+
+  spark-master:
+    image: bitnami/spark:3
+    container_name: spark-master
+    networks:
+      - stream-net
+    ports:
+      - '8080:8080'
+      - '7077:7077'
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./processing/app:/opt/app
+
+  spark-worker:
+    image: bitnami/spark:3
+    container_name: spark-worker
+    networks:
+      - stream-net
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=3G
+      - SPARK_WORKER_CORES=3
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./cleaner/app:/opt/app
+
+  wikimedia-producer:
+    build: ./producer
+    container_name: wikimedia-producer
+    networks:
+      - stream-net
+
+  rest-api:
+    build: ./api
+    container_name: rest-api
+    networks:
+      - stream-net
+    ports:
+      - "8000:8000"
+  
+networks:
+  stream-net:
+    external: true

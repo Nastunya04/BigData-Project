@@ -1,0 +1,3 @@
+fastapi==0.110.0
+uvicorn[standard]
+cassandra-driver==3.29.1
