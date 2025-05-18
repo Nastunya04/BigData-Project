@@ -17,7 +17,7 @@ def list_domains():
 
 @app.get("/pages/user/{user_id}", response_model=PageList)
 def get_pages_by_user(user_id: str):
-    query = "SELECT * FROM pages_by_user WHERE user_id = %s LIMIT 100;"
+    query = "SELECT * FROM pages_by_user WHERE user_id = %s;"
     rows = session.execute(query, (user_id,))
     return {"pages": list(rows)}
 
